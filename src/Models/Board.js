@@ -33,7 +33,7 @@ var Board = cc.Class.extend({
 
 		// No winner if tile is 0
 		var currentTile = this.tiles[row][column] 
-		if (this.tiles[row][column] == Constants.TileType.NULL) {
+		if (currentTile == Constants.TileType.NULL) {
 			return Constants.TileType.NULL;
 		}
 
