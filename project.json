@@ -13,6 +13,15 @@
 
     "jsList" : [
         "src/resource.js",
-        "src/app.js"
+        "src/Commons/Constants.js",
+        "src/Commons/Utils.js",
+
+        "src/app.js",
+
+        "src/Models/Board.js",
+
+        "src/Views/BoardNode.js",
+        "src/Views/Cursor.js",
+        "src/Views/Stone.js"
     ]
 }
