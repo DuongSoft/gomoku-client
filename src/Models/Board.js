@@ -25,114 +25,143 @@ var Board = cc.Class.extend({
 		}
 	},
 
-	checkWin: function(row, column) {
-		if (row == undefined) {
-			row = this.lastRowIdx;
-			column = this.lastColIdx;
-		}
+	checkWin: function() {
+		var currentTile = this.tiles[this.lastRowIdx][this.lastColIdx] 
 
-		// No winner if tile is 0
-		var currentTile = this.tiles[row][column] 
-		if (currentTile == Constants.TileType.NULL) {
-			return Constants.TileType.NULL;
-		}
+		return (this.checkHorizontal(currentTile) || this.checkVertical(currentTile) || 
+				this.checkForwardDiagonal(currentTile) || this.checkForwardDiagonal(currentTile) || Constants.TileType.NULL);
+	},
 
+	checkHorizontal: function(currentTile) {
+		var row = this.lastRowIdx;
+		var column = this.lastColIdx;
 		var maxOffset = Constants.NUMBER_TO_WIN - 1;
-		var count, iMin, iMax, jMin, jMax;
+		var count = 0;
 
-		// Check horizontal sequence
+		var jMin = column - maxOffset;
+		var jMin = jMin > -1 ? jMin : 0;
+		var jMax = column + maxOffset;
+		var jMax = jMax < this.numCols ? jMax : this.numCols - 1;
+
 		this.winSequence = [];
-		count = 0;
-		jMin = column - maxOffset;
-		jMin = jMin > -1 ? jMin : 0;
-		jMax = column + maxOffset;
-		jMax = jMax < this.numCols ? jMax : this.numCols - 1;
-		
+	
 		for (var j = jMin; j <= jMax; j++) {
 			if (this.tiles[row][j] == currentTile) {
 				this.winSequence.push({row: row, col: j});
 				count++;
-			} else if (count > 0) {
+			} else if (count >= Constants.NUMBER_TO_WIN) {
 				break;
+			} else {
+				count = 0;
+				this.winSequence = [];
 			}
 		}
 
 		if (count >= Constants.NUMBER_TO_WIN) {
 			return currentTile;
 		}
+		return Constants.TileType.NULL;
+	},
 
-		// Check vertical sequence
+	checkVertical: function(currentTile) {
+		var row = this.lastRowIdx;
+		var column = this.lastColIdx;
+		var maxOffset = Constants.NUMBER_TO_WIN - 1;
+		var count = 0;
+
+		var iMin = row - maxOffset;
+		var iMin = iMin > -1 ? iMin : 0;
+		var iMax = row + maxOffset;
+		var iMax = iMax < this.numRows ? iMax : this.numRows - 1;
+
 		this.winSequence = [];
-		count = 0;
-		iMin = row - maxOffset;
-		iMin = iMin > -1 ? iMin : 0;
-		iMax = row + maxOffset;
-		iMax = iMax < this.numRows ? iMax : this.numRows - 1;
 
 		for (var i = iMin; i <= iMax; i++) {
 			if (this.tiles[i][column] == currentTile) {
 				this.winSequence.push({row: i, col: column});
 				count++;
-			} else if (count > 0) {
+			} else if (count >= Constants.NUMBER_TO_WIN) {
 				break;
+			} else {
+				count = 0;
+				this.winSequence = [];
 			}
 		}
 
 		if (count >= Constants.NUMBER_TO_WIN) {
 			return currentTile;
 		}
+		return Constants.TileType.NULL;
+	},
 
-		// Check diagonal sequence (/)
-		this.winSequence = [];
-		count = 0;
-		jMin = column - maxOffset;
-		jMin = jMin > -1 ? jMin : 0;
-		jMax = column + maxOffset;
-		jMax = jMax < this.numCols ? jMax : this.numCols - 1;		
-		iMin = row - maxOffset;
-		iMin = iMin > -1 ? iMin : 0;
-		iMax = row + maxOffset;
-		iMax = iMax < this.numRows ? iMax : this.numRows - 1;
+	checkBackDiagonal: function(currentTile) {
+		var row = this.lastRowIdx;
+		var column = this.lastColIdx;
+		var maxOffset = Constants.NUMBER_TO_WIN - 1;
+		var count = 0;
 		
-		for (var i = iMin, j = jMax; i <= iMax; i++, j--) {
-			if (this.tiles[i][j] == currentTile) {
-				this.winSequence.push({row: i, col: j});
-				count++;
-			} else if (count > 0) {
-				break;
-			}
-		}
+		var jMin = column - maxOffset;
+		var jMin = jMin > -1 ? jMin : 0;
+		var jMax = column + maxOffset;
+		var jMax = jMax < this.numCols ? jMax : this.numCols - 1;		
+		var iMin = row - maxOffset;
+		var iMin = iMin > -1 ? iMin : 0;
+		var iMax = row + maxOffset;
+		var iMax = iMax < this.numRows ? iMax : this.numRows - 1;
 
-		if (count >= Constants.NUMBER_TO_WIN) {
-			return currentTile;
-		}
-
-		// Check diagonal sequence (\)
 		this.winSequence = [];
-		count = 0;
-		jMin = column - maxOffset;
-		jMin = jMin > -1 ? jMin : 0;
-		jMax = column + maxOffset;
-		jMax = jMax < this.numCols ? jMax : this.numCols - 1;		
-		iMin = row - maxOffset;
-		iMin = iMin > -1 ? iMin : 0;
-		iMax = row + maxOffset;
-		iMax = iMax < this.numRows ? iMax : this.numRows - 1;
 		
 		for (var i = iMin, j = jMin; i <= iMax; i++, j++) {
 			if (this.tiles[i][j] == currentTile) {
 				this.winSequence.push({row: i, col: j});
 				count++;
-			} else if (count > 0) {
+			} else if (count >= Constants.NUMBER_TO_WIN) {
 				break;
+			}  else {
+				count = 0;
+				this.winSequence = [];
 			}
 		}
 
 		if (count >= Constants.NUMBER_TO_WIN) {
 			return currentTile;
 		}
+		return Constants.TileType.NULL;
+	},
 
+	checkForwardDiagonal: function(currentTile) {
+		var row = this.lastRowIdx;
+		var column = this.lastColIdx;
+		var maxOffset = Constants.NUMBER_TO_WIN - 1;
+		var count = 0;
+
+		var count = 0;
+		var jMin = column - maxOffset;
+		var jMin = jMin > -1 ? jMin : 0;
+		var jMax = column + maxOffset;
+		var jMax = jMax < this.numCols ? jMax : this.numCols - 1;		
+		var iMin = row - maxOffset;
+		var iMin = iMin > -1 ? iMin : 0;
+		var iMax = row + maxOffset;
+		var iMax = iMax < this.numRows ? iMax : this.numRows - 1;
+		
 		this.winSequence = [];
+
+		for (var i = iMin, j = jMax; i <= iMax; i++, j--) {
+			if (this.tiles[i][j] == currentTile) {
+				this.winSequence.push({row: i, col: j});
+				count++;
+			} else if (count >= Constants.NUMBER_TO_WIN) {
+				break;
+			} else {
+				count = 0;
+				this.winSequence = [];
+			}
+		}
+
+		if (count >= Constants.NUMBER_TO_WIN) {
+			return currentTile;
+		}
 		return Constants.TileType.NULL;
 	},
 
