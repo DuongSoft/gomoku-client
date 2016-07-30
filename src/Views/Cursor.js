@@ -13,7 +13,7 @@ var Cursor = cc.Node.extend({
 		this.addChild(blackRenderer);
 		this.blackRenderer = blackRenderer;
 
-		if (cursorType == undefined) {
+		if (!cursorType) {
 			cursorType = Constants.CursorType.NULL;
 		}
 

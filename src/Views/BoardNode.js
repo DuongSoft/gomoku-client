@@ -3,23 +3,50 @@ var BoardNode = cc.Node.extend({
 	background: null,
 	cursor: null,
 	
-	player: null,
+	myColor: null,
+	goFirst: false,
+	isMyTurn: false,
 
-	mouseDownTile: null,
-
+	gameStarted: false,
 	gameEnded: false,
 
 	stones: null,
+	playerId: null,
 
 	ctor: function() {
 		this._super();
 
-		this.initNewGame();
+		this.setupSocket();
 
-		this.addBoardModel();
-		this.addBackground();
 		this.addCursor();
+		this.addBackground();
 		this.addMouseEventHandler();
+
+		this.gameCount = 0;
+
+		this.label = new StatusLabel("Waiting for other player", "Arial", 40);
+		this.label.setAnchorPoint(0, 0.5);
+		this.label.x -= this.label.width / 2;
+		this.label.setHorizontalAlignment(cc.TEXT_ALIGNMENT_LEFT);
+		this.label.enableTextAnim(1, true, null,
+								"Waiting for other player.", 
+								"Waiting for other player..",
+								"Waiting for other player...",
+								"Waiting for other player....");
+		this.addChild(this.label, 2);		
+	},
+
+	setPlayerId(id) {
+		this.playerId = id;
+	},
+
+	setupSocket: function() {
+		socketIOClient.on('gameStarted', this.onGameStarted.bind(this));
+		socketIOClient.on('turnBegan', this.onTurnBegan.bind(this));
+		socketIOClient.on('turnEnded', this.onTurnEnded.bind(this));
+		socketIOClient.on('setTileIndexFailed', this.onSetTileIndexFailed.bind(this));
+		socketIOClient.on('opponentDisconnected', this.onOpponentDisconnected.bind(this));
+		socketIOClient.on('nextGameStarted', this.onNextGameStarted.bind(this));
 	},
 
 	addBoardModel: function() {
@@ -33,7 +60,7 @@ var BoardNode = cc.Node.extend({
 	},
 
 	addCursor: function() {
-		var cursor = new Cursor(Constants.CursorType.WHITE);
+		var cursor = new Cursor();
 		this.addChild(cursor);
 		this.cursor = cursor;
 	},
@@ -47,20 +74,6 @@ var BoardNode = cc.Node.extend({
 				onMouseUp: this._onMouseUp.bind(this),
 				onMouseMove: this._onMouseMove.bind(this)
 			}, this);
-		}
-	},
-
-	initNewGame: function() {
-		this.player = Constants.Player.WHITE;
-		this.gameEnded = false;
-		this.stones = [];
-	},
-
-	switchPlayer: function() {
-		if (this.player == Constants.Player.WHITE) {
-			this.player = Constants.Player.BLACK;
-		} else {
-			this.player = Constants.Player.WHITE;
 		}
 	},
 
@@ -109,22 +122,63 @@ var BoardNode = cc.Node.extend({
 		return cc.p(x, y);
 	},
 
-	/*	pragma - callback	*/
+	addStone: function(tileCoordinate, index) {
+		var newStone = new Stone(index);
+		newStone.setPosition(this.t2s(tileCoordinate));
+		newStone.setName(tileCoordinate.row + ";" + tileCoordinate.col);
+		this.addChild(newStone);
+		this.stones.push(newStone);
+	},
+
+	restartGame: function() {
+		this.runAction(
+			cc.sequence(
+				cc.delayTime(1.0),
+				cc.callFunc(function() {
+					cc.log("restart...");
+					this.board.reset();
+					this.setOpacity(255);
+					this.gameEnded = false;
+					this.gameCount++;
+					this.stones = [];
+					this.removeAllChildren();
+					socketIOClient.emit('ready');
+					this.addBackground();
+					this.addCursor();
+					this.goFirst = (this.gameCount % 2 == 1) ^ (this.myColor == 1);
+					this.isMyTurn = this.goFirst;
+
+					this.label = new StatusLabel("Waiting for the other to be ready", "Arial", 36);
+					this.label.setAnchorPoint(0, 0.5);
+					this.label.x -= this.label.width / 2;
+					this.label.setHorizontalAlignment(cc.TEXT_ALIGNMENT_LEFT);
+					this.label.enableTextAnim(1, true, null,
+											"Waiting for the other to be ready.", 
+											"Waiting for the other to be ready..",
+											"Waiting for the other to be ready...",
+											"Waiting for the other to be ready....");
+					this.addChild(this.label, 2);					
+				}.bind(this))
+			)
+		);
+	},
+
+	/*	pragma - mouse callback	*/
 
 	_onMouseDown: function(event) {
-		if (this.gameEnded) return;
+		if (this.gameEnded || !this.isMyTurn) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 		this.mouseDownTile = touchedTile;
 	},
 
 	_onMouseMove: function(event) {
-		if (this.gameEnded) return;
+		if (this.gameEnded || !this.isMyTurn) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 		if (this.board.checkInside(touchedTile)) {
 			if (this.board.isEmptyTile(touchedTile.row, touchedTile.col)) {
-				this.cursor.setType(this.player);
+				this.cursor.setType(this.myColor);
 				var sc = this.t2s(touchedTile);
 				this.cursor.setPosition(sc);
 			} else {
@@ -136,40 +190,26 @@ var BoardNode = cc.Node.extend({
 	},
 
 	_onMouseUp: function(event) {
-		if (this.gameEnded) return;
+		if (this.gameEnded || !this.isMyTurn) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 
 		if (this.mouseDownTile.row == touchedTile.row && this.mouseDownTile.col == touchedTile.col) {
 			if (this.board.checkInside(touchedTile)) {
 				if (this.board.isEmptyTile(touchedTile.row, touchedTile.col)) {
-					this.board.setTileIndex(touchedTile.row, touchedTile.col, 
-											this.player);
-					var sc = this.t2s(touchedTile);
-					var newStone = new Stone(this.player);
-					newStone.setPosition(sc);
-					newStone.setName(touchedTile.row + ";" + touchedTile.col);
-					this.addChild(newStone);
-					this.stones.push(newStone);
-					this._onEndTurn();
+					socketIOClient.emit('setTileIndex', {
+						row: touchedTile.row,
+						col: touchedTile.col
+					});
 				}
 			}
 		}
 	},
 
-	_onEndTurn: function() {
-		// this.board.toString();
-		if (this.board.checkWin()) {
-			this._onWinGame();
-		} else {
-			this.cursor.switchType()
-			this.switchPlayer();
-		}
-	},
-
-	_onWinGame: function() {
+	/*	pragma - board node callback	*/
+	onGameEnded: function(winSequence, win) {
 		this.gameEnded = true;
-		var winSeq = this.board.getWinSequence();
+		var winSeq = winSequence;
 		for (var i = 0; i < this.stones.length; i++) {
 			this.stones[i].setOpacity(64);
 		}
@@ -177,18 +217,153 @@ var BoardNode = cc.Node.extend({
 			cc.log(winSeq[i].row + "; " + winSeq[i].col);
 			var stone = this.getChildByName(winSeq[i].row + ";" + winSeq[i].col);
 			stone.setOpacity(255);
-			// stone.runAction(
-			// 	cc.sequence(
-			// 		cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), 
-			// 		cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), 
-			// 		cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255),
-			// 		cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255), cc.fadeTo(0.3, 0), cc.fadeTo(0.3, 255)
-			// 	)
-			// );
 		}
 
-		this.scheduleOnce(function() {
-			cc.director.runScene(new cc.TransitionFade(1, new HelloWorldScene()));
-		}, 2);
+		var str = win ? "YOU WIN" : "YOU LOSE";
+
+		this.label.removeFromParent();
+		this.label = new cc.LabelTTF(str, "Arial", 60);
+		this.label.setFontFillColor(cc.color.WHITE);
+		this.label.enableStroke(cc.color.BLACK, 2);
+		this.addChild(this.label, 2);
+		this.label.runAction(
+			cc.sequence(
+				cc.fadeTo(2.5, 0),
+				cc.callFunc(function() {
+					this.restartGame();
+				}, this)
+			)
+		)
+	},
+
+	/*	pragma - socket callback	*/
+	onGameStarted: function(data) {
+		cc.log('onGameStarted');
+		cc.log(data);
+
+		// this.label.removeFromParent();
+		// this.label = new cc.LabelTTF("READY", "Arial", 40);
+		// this.label.setFontFillColor(cc.color.WHITE);
+		// this.label.enableStroke(cc.color.BLACK, 2);
+		// this.label.runAction(cc.fadeTo(1.0, 0));
+		// this.addChild(this.label, 2);
+
+		this.myColor = (data.color == 'WHITE' ? 1 : 2);
+		if (data.goFirst) {
+			this.isMyTurn = true;
+			this.cursor.setType(this.myColor);
+
+			this.label.removeFromParent();
+			this.label = new cc.LabelTTF("READY", "Arial", 60);
+			this.label.setFontFillColor(cc.color.WHITE);
+			this.label.enableStroke(cc.color.BLACK, 2);
+			this.addChild(this.label, 2);
+			this.label.runAction(
+				cc.sequence(
+					cc.fadeTo(1.0, 0),
+					cc.callFunc(function() {
+						this.label.setString("YOU GO FIRST");
+						this.label.setOpacity(255);
+						this.label.stopAllActions();
+						this.label.runAction(cc.fadeTo(2.0, 0));
+					}, this)
+				)
+			)
+		} else {
+			this.isMyTurn = false;
+			this.cursor.setType(Constants.CursorType.NULL);
+
+			this.label.removeFromParent();
+			this.label = new cc.LabelTTF("READY", "Arial", 60);
+			this.label.setFontFillColor(cc.color.WHITE);
+			this.label.enableStroke(cc.color.BLACK, 2);
+			this.label.runAction(cc.fadeTo(1.0, 0));
+			this.addChild(this.label, 2);	
+		}
+
+		this.addBoardModel();
+
+		this.gameEnded = false;
+
+		this.stones = [];
+	},
+
+	onNextGameStarted: function() {
+		cc.log('onGameStarted');
+
+		if (this.goFirst) {
+			this.label.removeFromParent();
+			this.label = new cc.LabelTTF("READY", "Arial", 40);
+			this.label.setFontFillColor(cc.color.WHITE);
+			this.label.enableStroke(cc.color.BLACK, 2);
+			this.addChild(this.label, 2);
+			this.label.runAction(
+				cc.sequence(
+					cc.fadeTo(1.0, 0),
+					cc.callFunc(function() {
+						this.label.setString("YOU GO FIRST");
+						this.label.setOpacity(255);
+						this.label.stopAllActions();
+						this.label.runAction(cc.fadeTo(2.0, 0));
+					}, this)
+				)
+			)
+		} else {
+			this.label.removeFromParent();
+			this.label = new cc.LabelTTF("READY", "Arial", 40);
+			this.label.setFontFillColor(cc.color.WHITE);
+			this.label.enableStroke(cc.color.BLACK, 2);
+			this.label.runAction(cc.fadeTo(1.0, 0));
+			this.addChild(this.label, 2);			
+		}
+
+		this.gameEnded = false;	
+	},
+
+	onTurnBegan: function(data) {
+		cc.log("onTurnBegan");
+		cc.log(data);
+		this.isMyTurn = true;
+		var opponentColor = (this.myColor == 1 ? 2 : 1);
+		this.addStone({row: data.row, col: data.col}, opponentColor);
+		this.board.setTileIndex(data.row, data.col, opponentColor);
+
+		if (data.sequence) {
+			console.log('You lose!!');
+			this.onGameEnded(data.sequence, false);
+		}
+	},
+
+	onTurnEnded: function(data) {
+		cc.log("onTurnEnded");
+		cc.log(data);
+		this.isMyTurn = false;
+		this.addStone({row: data.row, col: data.col}, this.myColor);
+		this.board.setTileIndex(data.row, data.col, this.myColor);
+
+		if (data.sequence) {
+			console.log('You win!!');
+			this.onGameEnded(data.sequence, true);
+		}
+	},
+
+	onSetTileIndexFailed: function(data) {
+		console.log('Server: ' + data.message);
+	},
+
+	onOpponentDisconnected: function(data) {
+        cc.log('Your opponent disconnected.');
+        cc.log(data);
+		
+		this.label.removeFromParent();
+		this.label = new StatusLabel("Opponent disconnected. Game end in: 3", "Arial", 36);
+		this.label.setFontFillColor(cc.color.WHITE);
+		this.label.enableStroke(cc.color.BLACK, 2);
+		this.label.enableTextAnim(1, false, function() {
+										location.reload(true)
+									}.bind(this),
+									"Opponent disconnected. Game end in: 2", 
+									"Opponent disconnected. Game end in: 1")
+		this.addChild(this.label, 2);
 	}
 })

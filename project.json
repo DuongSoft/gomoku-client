@@ -22,6 +22,8 @@
 
         "src/Views/BoardNode.js",
         "src/Views/Cursor.js",
-        "src/Views/Stone.js"
+        "src/Views/Stone.js",
+        "src/Views/StatusLabel.js"
     ]
 }
+
