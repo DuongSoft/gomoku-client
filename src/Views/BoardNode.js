@@ -360,7 +360,7 @@ var BoardNode = cc.Node.extend({
 		this.label.setFontFillColor(cc.color.WHITE);
 		this.label.enableStroke(cc.color.BLACK, 2);
 		this.label.enableTextAnim(1, false, function() {
-										location.reload(true)
+										location.reload();
 									}.bind(this),
 									"Opponent disconnected. Game end in: 2", 
 									"Opponent disconnected. Game end in: 1")
