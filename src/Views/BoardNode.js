@@ -173,7 +173,7 @@ var BoardNode = cc.Node.extend({
 	},
 
 	_onMouseMove: function(event) {
-		if (this.gameEnded || !this.isMyTurn) return;
+		if (this.gameEnded) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 		if (this.board.checkInside(touchedTile)) {
