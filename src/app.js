@@ -19,7 +19,6 @@ var HelloWorldLayer = cc.Layer.extend({
         socketIOClient.on('hello', this.onHello.bind(this));
 
         socketIOClient.on('joinGameSucceeded', this.onJoinGameSucceeded.bind(this));
-        socketIOClient.on('joinGameFailed', this.onJoinGameFailed.bind(this));
 
         var boardNode = new BoardNode();
         boardNode.x = cc.winSize.width / 2;
@@ -47,10 +46,6 @@ var HelloWorldLayer = cc.Layer.extend({
     onJoinGameSucceeded: function(data) {
         cc.log('Server: ' + data.message);
 
-    },
-
-    onJoinGameFailed: function(data) {
-        cc.log('Server: ' + data.message)
     }
 });
 

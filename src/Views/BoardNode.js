@@ -47,6 +47,7 @@ var BoardNode = cc.Node.extend({
 		socketIOClient.on('setTileIndexFailed', this.onSetTileIndexFailed.bind(this));
 		socketIOClient.on('opponentDisconnected', this.onOpponentDisconnected.bind(this));
 		socketIOClient.on('nextGameStarted', this.onNextGameStarted.bind(this));
+		socketIOClient.on('joinGameFailed', this.onJoinGameFailed.bind(this));
 	},
 
 	addBoardModel: function() {
@@ -365,5 +366,20 @@ var BoardNode = cc.Node.extend({
 									"Opponent disconnected. Game end in: 2", 
 									"Opponent disconnected. Game end in: 1")
 		this.addChild(this.label, 2);
-	}
+	},
+
+    onJoinGameFailed: function(data) {
+    	var str;
+    	cc.log(data);
+    	if (data.message == "The game is already started") {
+    		str = "Server is full. Please try again later.";
+    	} else {
+    		str = "Unknown error. Please try again later.";
+    	}
+ 		this.label.removeFromParent();
+		this.label = new StatusLabel(str, "Arial", 40);
+		this.label.setFontFillColor(cc.color.WHITE);
+		this.label.enableStroke(cc.color.BLACK, 2);
+		this.addChild(this.label, 2);
+    }
 })
