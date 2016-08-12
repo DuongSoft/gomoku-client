@@ -3,9 +3,8 @@ var socketIOClient = null;
 
 var HelloWorldLayer = cc.Layer.extend({
     sprite:null,
-    id: null,
     playerName: null,
-    boardNode: null,
+    roomId: null,
 
     ctor:function () {
         this._super();
@@ -20,12 +19,7 @@ var HelloWorldLayer = cc.Layer.extend({
 
         socketIOClient.on('joinGameSucceeded', this.onJoinGameSucceeded.bind(this));
 
-        var boardNode = new BoardNode();
-        boardNode.x = cc.winSize.width / 2;
-        boardNode.y = cc.winSize.height / 2;
-        this.addChild(boardNode);
-
-        this.boardNode = boardNode;
+        this.roomId = window.sessionStorage.getItem("roomId");
     },
 
     onConnect: function() {
@@ -35,17 +29,26 @@ var HelloWorldLayer = cc.Layer.extend({
     onHello: function(data) {       
         cc.log('Server: ' + data.message);
         cc.log('My id: ' + data.id);
+        
+        var boardNode = new BoardNode(this.roomId, data.id);
+        boardNode.x = cc.winSize.width / 2;
+        boardNode.y = cc.winSize.height / 2;
+        this.addChild(boardNode);
 
-        this.boardNode.setPlayerId(data.id);
-        socketIOClient.emit('joinGame', {
-            name: this.playerName,
-            id: data.id
-        });
+        if (!this.roomId) {
+            socketIOClient.emit('createGame', {
+                name: this.playerName
+            });
+        } else {
+            socketIOClient.emit('joinGame', {
+                gameId: this.roomId,
+                name: this.playerName
+            });
+        }
     },
 
     onJoinGameSucceeded: function(data) {
         cc.log('Server: ' + data.message);
-
     }
 });
 

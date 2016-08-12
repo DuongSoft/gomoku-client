@@ -1,46 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Cocos2d-html5 Hello World test</title>
-    <link rel="icon" type="image/GIF" href="res/favicon.ico"/>
-    <meta name="viewport" content="initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes"/>
-    <meta name="full-screen" content="yes"/>
-    <meta name="screen-orientation" content="portrait"/>
-    <meta name="x5-fullscreen" content="true"/>
-    <meta name="360-fullscreen" content="true"/>
-    <style>
-        body, canvas, div {
-            -moz-user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            -khtml-user-select: none;
-            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    <title>Online Gomoku</title>
+    <style type="text/css">
+        body {
+            text-align: center;
+            margin-top: 300px;
+            /*background: black;*/
+            /*color: white;*/
+            min-width: 570px;
+        }
+
+        .page-btn {
+            width: 200px;
+            height: 40px;
+            margin: 10px 5px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #text-field {
+            width: 500px;
+            height: 35px;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #caption{
+            font-weight: 900;
+            font-size: 60px;
         }
     </style>
 </head>
-<body style="padding:0; margin: 0; background: #000;">
-<script src="res/loading.js"></script>
-<canvas id="gameCanvas" width="480" height="720"></canvas>
-<script>
-    (function () {
-        var nav = window.navigator;
-        var ua = nav.userAgent.toLowerCase();
-        var uaResult = /android (\d+(?:\.\d+)+)/i.exec(ua) || /android (\d+(?:\.\d+)+)/i.exec(nav.platform);
-        if (uaResult) {
-            var osVersion = parseInt(uaResult[1]) || 0;
-            var browserCheck = ua.match(/(qzone|micromessenger|qqbrowser)/i);
-            if (browserCheck) {
-                var gameCanvas = document.getElementById("gameCanvas");
-                var ctx = gameCanvas.getContext('2d');
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, 1, 1);
-            }
+<body>
+    <p id="caption">
+        ONLINE GOMOKU
+    </p>
+    <div id="content">
+        <input type="button" onclick="createGame()" value="Create game" class="page-btn" id="btn-create">
+        <br>
+        <input type="button" onclick="joinMenu()" value="Join game" class="page-btn" id="btn-join">
+    </div>
+    <script type="text/javascript">
+        function clearContent() {
+            var content = document.getElementById("content");
+            while (content.hasChildNodes()) {
+                content.removeChild(content.lastChild)
+            }            
         }
-    })();
-</script>
-<script src="frameworks/cocos2d-html5/CCBoot.js"></script>
-<script cocos src="main.js"></script>
+
+        function getContent() {
+            return document.getElementById("content");
+        }
+
+        function createGame() {
+            window.sessionStorage.removeItem("roomId");
+            window.location.href = '/game.html';
+        }
+
+        function joinMenu() {
+            // var body = document.getElementsByTagName("body")[0];
+
+            clearContent();
+
+            var content = getContent();
+            var text = window.sessionStorage.getItem("roomId");
+
+            var textfield = document.createElement("input");
+            textfield.type = "text";
+            textfield.id = "text-field";
+            if (text) {
+                textfield.value = text;
+            }
+            content.appendChild(textfield);
+
+            content.appendChild(document.createElement("br"));
+
+            var btnBack = document.createElement("input");
+            btnBack.type = "button";
+            btnBack.value = "Back";
+            btnBack.className = "page-btn";
+            btnBack.id = "btn-back"
+            btnBack.addEventListener("click", joinBack);
+            content.appendChild(btnBack);
+
+            var btnJoin = document.createElement("input");
+            btnJoin.type = "button";
+            btnJoin.value = "Join";
+            btnJoin.className = "page-btn";
+            btnJoin.id = "btn-join";
+            btnJoin.addEventListener("click", joinGame);
+            content.appendChild(btnJoin);
+        }
+
+        function joinBack() {
+            var text = document.getElementById("text-field").value || "";
+            window.sessionStorage.setItem('roomId', text.trim());
+            
+            clearContent();
+
+            var content = getContent();         
+
+            var btnCreate = document.createElement("input");
+            btnCreate.type = "button";
+            btnCreate.value = "Create game";
+            btnCreate.className = "page-btn";
+            btnCreate.id = "btn-create";
+            btnCreate.addEventListener("click", createGame);
+            content.appendChild(btnCreate);
+
+            content.appendChild(document.createElement("br"));
+
+            var btnJoin = document.createElement("input");
+            btnJoin.type = "button";
+            btnJoin.value = "Join game";
+            btnJoin.className = "page-btn";
+            btnJoin.id = "btn-join"
+            btnJoin.addEventListener("click", joinMenu);
+            content.appendChild(btnJoin);            
+        }
+
+        function joinGame() {
+            var text = document.getElementById("text-field").value || "";
+            window.sessionStorage.setItem('roomId', text.trim());
+            window.location.href = '/game.html';
+        }
+    </script>
 </body>
 </html>

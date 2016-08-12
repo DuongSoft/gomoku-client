@@ -1,8 +1,8 @@
 var Constants = {
 	NUMBER_TO_WIN: 5,
 
-	// SOCKET_URL: "localhost:8080",
-	SOCKET_URL: "http://gomoku-server.herokuapp.com",
+	SOCKET_URL: "localhost:8080",
+	// SOCKET_URL: "http://gomoku-server.herokuapp.com",
 
 	BoardSize: {
 		ROW: 19,

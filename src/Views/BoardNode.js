@@ -7,13 +7,15 @@ var BoardNode = cc.Node.extend({
 	goFirst: false,
 	isMyTurn: false,
 
-	gameStarted: false,
+	gameDidStart: false,
 	gameEnded: false,
 
 	stones: null,
 	playerId: null,
 
-	ctor: function() {
+	roomId: null,
+
+	ctor: function(roomId, playerId) {
 		this._super();
 
 		this.setupSocket();
@@ -24,20 +26,39 @@ var BoardNode = cc.Node.extend({
 
 		this.gameCount = 0;
 
-		this.label = new StatusLabel("Waiting for other player", "Arial", 40);
-		this.label.setAnchorPoint(0, 0.5);
-		this.label.x -= this.label.width / 2;
-		this.label.setHorizontalAlignment(cc.TEXT_ALIGNMENT_LEFT);
-		this.label.enableTextAnim(1, true, null,
-								"Waiting for other player.", 
-								"Waiting for other player..",
-								"Waiting for other player...",
-								"Waiting for other player....");
-		this.addChild(this.label, 2);		
-	},
+		this.roomId = roomId || playerId;
+		this.playerId = playerId;
 
-	setPlayerId(id) {
-		this.playerId = id;
+		if (!roomId) {
+			this.label = new StatusLabel("Waiting for other player", "Arial", 40);
+			this.label.setAnchorPoint(0, 0.5);
+			this.label.x -= this.label.width / 2;
+			this.label.setHorizontalAlignment(cc.TEXT_ALIGNMENT_LEFT);
+			this.label.enableTextAnim(1, true, null,
+									"Waiting for other player.", 
+									"Waiting for other player..",
+									"Waiting for other player...",
+									"Waiting for other player....");
+			this.addChild(this.label, 2);
+
+			window.setTimeout(function() {
+				window.prompt("Message this room id to play with your friend !!", this.roomId);
+			}.bind(this), 1000);
+			
+		} else {
+			this.label = new StatusLabel("Loading", "Arial", 40);
+			this.label.setAnchorPoint(0, 0.5);
+			this.label.x -= this.label.width / 2;
+			this.label.setHorizontalAlignment(cc.TEXT_ALIGNMENT_LEFT);
+			this.label.enableTextAnim(1, true, null,
+									"Loading.", 
+									"Loading..",
+									"Loading...",
+									"Loading....");
+			this.addChild(this.label, 2);	
+		}
+
+		this.addRoomIdLabel();
 	},
 
 	setupSocket: function() {
@@ -58,6 +79,14 @@ var BoardNode = cc.Node.extend({
 		var background = new cc.Sprite(res.Grid_png);
 		this.addChild(background, -1);
 		this.background = background;
+	},
+
+	addRoomIdLabel: function() {
+		var roomIdLabel = new cc.LabelTTF('Room ID: ' + this.roomId, 'Arial', 30);
+		roomIdLabel.setFontFillColor(cc.color.WHITE);
+		roomIdLabel.setOpacity(128);
+		roomIdLabel.y = cc.winSize.height / 2 * 0.8;
+		this.addChild(roomIdLabel);
 	},
 
 	addCursor: function() {
@@ -145,6 +174,7 @@ var BoardNode = cc.Node.extend({
 					this.removeAllChildren();
 					socketIOClient.emit('ready');
 					this.addBackground();
+					this.addRoomIdLabel();
 					this.addCursor();
 					this.goFirst = (this.gameCount % 2 == 1) ^ (this.myColor == 1);
 					this.isMyTurn = this.goFirst;
@@ -167,14 +197,14 @@ var BoardNode = cc.Node.extend({
 	/*	pragma - mouse callback	*/
 
 	_onMouseDown: function(event) {
-		if (this.gameEnded || !this.isMyTurn) return;
+		if (this.gameEnded || !this.isMyTurn || !this.gameDidStart) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 		this.mouseDownTile = touchedTile;
 	},
 
 	_onMouseMove: function(event) {
-		if (this.gameEnded) return;
+		if (this.gameEnded || !this.gameDidStart) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 		if (this.board.checkInside(touchedTile)) {
@@ -191,7 +221,7 @@ var BoardNode = cc.Node.extend({
 	},
 
 	_onMouseUp: function(event) {
-		if (this.gameEnded || !this.isMyTurn) return;
+		if (this.gameEnded || !this.isMyTurn || !this.gameDidStart) return;
 		var touchedPos = this.convertToNodeSpace(event.getLocation());
 		var touchedTile = this.s2t(touchedPos);
 
@@ -284,13 +314,14 @@ var BoardNode = cc.Node.extend({
 
 		this.addBoardModel();
 
+		this.gameDidStart = true;
 		this.gameEnded = false;
 
 		this.stones = [];
 	},
 
 	onNextGameStarted: function() {
-		cc.log('onGameStarted');
+		cc.log('onNextGameStarted');
 
 		if (this.goFirst) {
 			this.label.removeFromParent();
@@ -361,7 +392,7 @@ var BoardNode = cc.Node.extend({
 		this.label.setFontFillColor(cc.color.WHITE);
 		this.label.enableStroke(cc.color.BLACK, 2);
 		this.label.enableTextAnim(1, false, function() {
-										location.reload();
+										window.location.href = '/index.html';;
 									}.bind(this),
 									"Opponent disconnected. Game end in: 2", 
 									"Opponent disconnected. Game end in: 1")
@@ -372,7 +403,9 @@ var BoardNode = cc.Node.extend({
     	var str;
     	cc.log(data);
     	if (data.message == "The game is already started") {
-    		str = "Server is full. Please try again later.";
+    		str = "This room is full.\nCreate new or join another room to play.";
+    	} else if (data.message == "No game with such id") {
+			str = "No room with such id.\nCreate new or join another room to play.";
     	} else {
     		str = "Unknown error. Please try again later.";
     	}
