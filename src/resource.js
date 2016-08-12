@@ -3,7 +3,8 @@ var res = {
 	White_png: "white.png",
 	WhiteHover_png: "white_hover.png",
 	Black_png: "black.png",
-	BlackHover_png: "black_hover.png"
+	BlackHover_png: "black_hover.png",
+	New_png: "new.png"
 };
 
 var g_resources = [];

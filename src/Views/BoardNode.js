@@ -14,6 +14,7 @@ var BoardNode = cc.Node.extend({
 	playerId: null,
 
 	roomId: null,
+	newMarker: null,
 
 	ctor: function(roomId, playerId) {
 		this._super();
@@ -28,6 +29,10 @@ var BoardNode = cc.Node.extend({
 
 		this.roomId = roomId || playerId;
 		this.playerId = playerId;
+
+		this.newMarker = new cc.Sprite(res.New_png);
+		this.newMarker.setVisible(false);
+		this.addChild(this.newMarker, 3);
 
 		if (!roomId) {
 			this.label = new StatusLabel("Waiting for other player", "Arial", 40);
@@ -158,6 +163,9 @@ var BoardNode = cc.Node.extend({
 		newStone.setName(tileCoordinate.row + ";" + tileCoordinate.col);
 		this.addChild(newStone);
 		this.stones.push(newStone);
+		this.newMarker.x = newStone.x + newStone.width / 5;
+		this.newMarker.y = newStone.y + newStone.height / 5;
+		this.newMarker.setVisible(true);
 	},
 
 	restartGame: function() {
