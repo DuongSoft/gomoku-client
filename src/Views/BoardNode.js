@@ -24,15 +24,12 @@ var BoardNode = cc.Node.extend({
 		this.addCursor();
 		this.addBackground();
 		this.addMouseEventHandler();
+		this.addNewMarker();
 
 		this.gameCount = 0;
 
 		this.roomId = roomId || playerId;
 		this.playerId = playerId;
-
-		this.newMarker = new cc.Sprite(res.New_png);
-		this.newMarker.setVisible(false);
-		this.addChild(this.newMarker, 3);
 
 		if (!roomId) {
 			this.label = new StatusLabel("Waiting for other player", "Arial", 40);
@@ -84,6 +81,12 @@ var BoardNode = cc.Node.extend({
 		var background = new cc.Sprite(res.Grid_png);
 		this.addChild(background, -1);
 		this.background = background;
+	},
+
+	addNewMarker: function() {
+		this.newMarker = new cc.Sprite(res.New_png);
+		this.newMarker.setVisible(false);
+		this.addChild(this.newMarker, 3);
 	},
 
 	addRoomIdLabel: function() {
@@ -184,6 +187,7 @@ var BoardNode = cc.Node.extend({
 					this.addBackground();
 					this.addRoomIdLabel();
 					this.addCursor();
+					this.addNewMarker();
 					this.goFirst = (this.gameCount % 2 == 1) ^ (this.myColor == 1);
 					this.isMyTurn = this.goFirst;
 
